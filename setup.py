@@ -32,6 +32,7 @@ __status__ = "Production"
 from setuptools import setup
 from distutils.command.build_py import build_py
 from distutils.file_util import copy_file
+from distutils.dir_util import copy_tree
 import subprocess
 import os, sys, sysconfig
 import multiprocessing
@@ -56,16 +57,15 @@ class my_build_py(build_py):
       self.mkpath(target_dir)
       
       clonedir = os.path.join(tempfile.gettempdir(),"OMSimulator")
-      #clonedir = os.path.join(os.getcwd(),"OMSimulatorGit")
 
-      # remove git directory if exists
+      #remove git directory if exists
       if os.path.isdir(clonedir):
         git.rmtree(clonedir)
-    
+     
       print("Cloning git repository in the following location : ", clonedir)
       git.Repo.clone_from('https://github.com/OpenModelica/OMSimulator', clonedir, recursive=True)
       print("Cloning Successful")
-       
+        
       #print(os.getcwd())
       currentdir = os.getcwd()
       os.chdir(clonedir)
@@ -104,17 +104,14 @@ class my_build_py(build_py):
       #print(os.getcwd())
       os.chdir(currentdir)
 
-      # copy dlls and OMSimulator.py to root directory
-      installdir = os.path.join(clonedir,"install") 
-      for root, dirs, files in os.walk(installdir):
-        path = root.split(os.sep)
-        for file in files:
-          (tmpfile, ext) = os.path.splitext(file)
-          if ((tmpfile == "libOMSimulator" or tmpfile== "OMSimulator" or tmpfile == "libomtlmsimulator" or tmpfile == "omtlmsimulator") and (ext == ".dll" or ext==".so")):
-            copy_file(os.path.join(root,file), target_dir, link='hard')
-          if (tmpfile == "OMSimulator" and ext == ".py" or tmpfile =="__init__" and ext == ".py"):
-            copy_file(os.path.join(root,file), target_dir, link='hard')
-      
+      # copy OMSimulator package to root directory
+      if sysconfig.get_platform() == 'linux-x86_64':
+        copy_tree(os.path.join(clonedir,"install/linux/lib/OMSimulator"), target_dir)
+      elif sysconfig.get_platform() == 'mingw':
+        copy_tree(os.path.join(clonedir,"install/mingw/lib/OMSimulator"), target_dir)
+      else:
+        copy_tree(os.path.join(clonedir,"install/win/lib/OMSimulator"), target_dir)
+        
       ## remove the git directory after copying the files
       git.rmtree(clonedir)
 
