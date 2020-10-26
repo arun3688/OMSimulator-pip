@@ -76,26 +76,27 @@ class my_build_py(build_py):
         subprocess.call(['make', 'config-OMSimulator'])
         subprocess.call(['make', 'OMSimulator', '-j'+str(multiprocessing.cpu_count())])
       else:
-        visualStudioVersion = ["VS15-Win64", "VS15-Win32", "VS14-Win64", "VS14-Win32"]
-        args = "";
-        if os.environ.get('VS15-Win64'):
-          args = visualStudioVersion[0]
-        elif os.environ.get('VS15-Win32'):
-          args = visualStudioVersion[1]
-        elif os.environ.get('VS14-Win64'):
-          args = visualStudioVersion[2]
-        elif os.environ.get('VS14-Win32'):
-          args = visualStudioVersion[3]
+        visualStudioVersion = {
+          "VS15-Win64" : "path to vcvarsall.bat for Visual Studio 2017 64 bit",
+          "VS15-Win32" : "path to vcvarsall.bat for Visual Studio 2017 32 bit",
+          "VS14-Win64" : "path to vcvarsall.bat for Visual Studio 2015 64 bit",
+          "VS14-Win32" : "path to vcvarsall.bat for Visual Studio 2015 32 bit"
+        }
         
+        args = "";
+        for version in visualStudioVersion:
+          if os.environ.get(version):
+            args = version
+            break
+
         if args:
           subprocess.call(['configWinVS.bat', args])
           subprocess.call(['buildWinVS.bat', args, '-j'+str(multiprocessing.cpu_count())])
         else:
           print("Environment Variable not set for Visual Studio version, Please set one of the following")
-          print("1. Variable name: VS15-Win64, ", "Variable value: path to vcvarsall.bat, ", "for Visual Studio 2017 64 bit")
-          print("2. Variable name: VS15-Win32, ", "Variable value: path to vcvarsall.bat, ", "for Visual Studio 2017 32 bit")
-          print("3. Variable name: VS14-Win64, ", "Variable value: path to vcvarsall.bat, ", "for Visual Studio 2015 64 bit")
-          print("4. Variable name: VS14-Win32, ", "Variable value: path to vcvarsall.bat, ", "for Visual Studio 2015 32 bit")
+          for keys, value in visualStudioVersion.items():
+            print("Variable name:", keys, " Variable value:", value)
+            
           os.chdir(currentdir)
           git.rmtree(clonedir)
           sys.exit(1);
