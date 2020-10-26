@@ -76,30 +76,31 @@ class my_build_py(build_py):
         subprocess.call(['make', 'config-OMSimulator'])
         subprocess.call(['make', 'OMSimulator', '-j'+str(multiprocessing.cpu_count())])
       else:
-        visualStudioVersion = ["VS14-Win32", "VS14-Win64", "VS15-Win32", "VS15-Win64"] 
-        print("Building windows libraries, The following versions of Visual Studio are supported:")
-        print("1." , visualStudioVersion[0] , "-> Visual Studio 14 2015")
-        print("2." , visualStudioVersion[1] , "-> Visual Studio 14 2015 Win64")
-        print("3." , visualStudioVersion[2] , "-> Visual Studio 15 2017")
-        print("4." , visualStudioVersion[3] , "-> Visual Studio 15 2017 Win64")
-        print("5. None, Exit and install the above visual studio version and build again:")
-         
-        choice = int(input("Enter Your choice (press (1 or 2 or 5) ) :"))
-           
-        if (choice > 5):
-          print("Invalid choice, choose a valid choice from (1 to 5)")
-          os.chdir(currentdir)
-          git.rmtree(clonedir)
-          quit()
-        elif(choice == 5):
-          print("! Quitting the installation, Please install any of the above Visual Studio version and continue")
-          os.chdir(currentdir)
-          git.rmtree(clonedir)
-          quit()
+        visualStudioVersion = {
+          "VS15-Win64" : "path to vcvarsall.bat for Visual Studio 2017 64 bit",
+          "VS15-Win32" : "path to vcvarsall.bat for Visual Studio 2017 32 bit",
+          "VS14-Win64" : "path to vcvarsall.bat for Visual Studio 2015 64 bit",
+          "VS14-Win32" : "path to vcvarsall.bat for Visual Studio 2015 32 bit"
+        }
+        
+        args = "";
+        for version in visualStudioVersion:
+          if os.environ.get(version):
+            args = version
+            break
+
+        if args:
+          subprocess.call(['configWinVS.bat', args])
+          subprocess.call(['buildWinVS.bat', args, '-j'+str(multiprocessing.cpu_count())])
         else:
-          subprocess.call(['configWinVS.bat', visualStudioVersion[choice-1]])
-          subprocess.call(['buildWinVS.bat', visualStudioVersion[choice-1], '-j'+str(multiprocessing.cpu_count())])
-      
+          print("Environment Variable not set for Visual Studio version, Please set one of the following")
+          for keys, value in visualStudioVersion.items():
+            print("Variable name:", keys, " Variable value:", value)
+            
+          os.chdir(currentdir)
+          git.rmtree(clonedir)
+          sys.exit(1);
+
       print("### Build OMSimulator successful ###")
       #print(os.getcwd())
       os.chdir(currentdir)
