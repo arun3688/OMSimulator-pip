@@ -55,7 +55,7 @@ class my_build_py(build_py):
       # mkpath is a distutils helper to create directories
       self.mkpath(target_dir)
       
-      ## download the zip directory from url a
+      ## download the zip directory from url 
       if (sysconfig.get_platform() == 'linux-x86_64'):
         r = requests.get("https://test.openmodelica.org/jenkins/job/OMSimulator/job/master/lastSuccessfulBuild/artifact/OMSimulator-linux-amd64*/*zip*/archive.zip")
       elif (sysconfig.get_platform() == 'mingw'):
