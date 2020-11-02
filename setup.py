@@ -76,9 +76,7 @@ class my_build_py(build_py):
 
       ## copy the zip file in temp directory
       z.extractall(tempDir)
-      
-      ## read the zip file
-      file = zipfile.ZipFile(zipFilePath)
+      z.close()
 
       zipDir = os.path.join(tempDir, dirname)
       #remove zip directory if exists
@@ -86,13 +84,11 @@ class my_build_py(build_py):
         shutil.rmtree(zipDir)
 
       ## unzip the zip file
-      file.extractall(zipDir)
+      shutil.unpack_archive(zipFilePath, zipDir)
 
       # copy OMSimulator package to root directory
       copy_tree(os.path.join(zipDir,"lib/OMSimulator"), target_dir)
-      z.close()
-      file.close()
-      
+
       ## remove the zip directory after copying the files
       shutil.rmtree(zipDir)
       ## remove the zip file
