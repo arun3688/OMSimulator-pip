@@ -33,10 +33,9 @@ from setuptools import setup
 from distutils.command.build_py import build_py
 from distutils.file_util import copy_file
 from distutils.dir_util import copy_tree
-import subprocess
-import os, sys, sysconfig
-import multiprocessing
-import git, tempfile
+import os, sysconfig
+import tempfile
+import requests, zipfile, io, shutil
 
 
 topdir= os.path.join(os.getcwd(), 'OMSimulator')
@@ -56,78 +55,62 @@ class my_build_py(build_py):
       # mkpath is a distutils helper to create directories
       self.mkpath(target_dir)
       
-      clonedir = os.path.join(tempfile.gettempdir(),"OMSimulator")
+      ## download the zip directory from url a
+      if (sysconfig.get_platform() == 'linux-x86_64'):
+        r = requests.get("https://test.openmodelica.org/jenkins/job/OMSimulator/job/master/lastSuccessfulBuild/artifact/OMSimulator-linux-amd64*/*zip*/archive.zip")
+      elif (sysconfig.get_platform() == 'mingw'):
+        r = requests.get("https://test.openmodelica.org/jenkins/job/OMSimulator/job/master/lastSuccessfulBuild/artifact/OMSimulator-mingw64*/*zip*/archive.zip")
+      elif (sysconfig.get_platform() == "win-amd64"):
+        r = requests.get("https://test.openmodelica.org/jenkins/job/OMSimulator/job/master/lastSuccessfulBuild/artifact/OMSimulator-win64*/*zip*/archive.zip")
 
-      #remove git directory if exists
-      if os.path.isdir(clonedir):
-        git.rmtree(clonedir)
-     
-      print("Cloning git repository in the following location : ", clonedir)
-      git.Repo.clone_from('https://github.com/OpenModelica/OMSimulator', clonedir, recursive=True)
-      print("Cloning Successful")
-        
-      #print(os.getcwd())
-      currentdir = os.getcwd()
-      os.chdir(clonedir)
-       
-      ## config and build OMSimulator 
-      if (sysconfig.get_platform() == 'linux-x86_64' or sysconfig.get_platform() == 'mingw'):
-        subprocess.call(['make', 'config-3rdParty'])
-        subprocess.call(['make', 'config-OMSimulator'])
-        subprocess.call(['make', 'OMSimulator', '-j'+str(multiprocessing.cpu_count())])
-      else:
-        visualStudioVersion = {
-          "VS15-Win64" : "path to vcvarsall.bat for Visual Studio 2017 64 bit",
-          "VS15-Win32" : "path to vcvarsall.bat for Visual Studio 2017 32 bit",
-          "VS14-Win64" : "path to vcvarsall.bat for Visual Studio 2015 64 bit",
-          "VS14-Win32" : "path to vcvarsall.bat for Visual Studio 2015 32 bit"
-        }
-        
-        args = "";
-        for version in visualStudioVersion:
-          if os.environ.get(version):
-            args = version
-            break
+      z = zipfile.ZipFile(io.BytesIO(r.content))
+      
+      zipInfo = z.namelist()[0]
+      dirname, extension = os.path.splitext(zipInfo)
 
-        if args:
-          subprocess.call(['configWinVS.bat', args])
-          subprocess.call(['buildWinVS.bat', args, '-j'+str(multiprocessing.cpu_count())])
-        else:
-          print("Environment Variable not set for Visual Studio version, Please set one of the following")
-          for keys, value in visualStudioVersion.items():
-            print("Variable name:", keys, " Variable value:", value)
-            
-          os.chdir(currentdir)
-          git.rmtree(clonedir)
-          sys.exit(1);
+      tempDir = tempfile.gettempdir()
+      zipFilePath = os.path.join(tempDir, zipInfo)
+      
+      if os.path.exists(zipFilePath):
+        os.remove(zipFilePath)
 
-      print("### Build OMSimulator successful ###")
-      #print(os.getcwd())
-      os.chdir(currentdir)
+      ## copy the zip file in temp directory
+      z.extractall(tempDir)
+      
+      ## read the zip file
+      file = zipfile.ZipFile(zipFilePath)
+
+      zipDir = os.path.join(tempDir, dirname)
+      #remove zip directory if exists
+      if os.path.isdir(zipDir):
+        shutil.rmtree(zipDir)
+
+      ## unzip the zip file
+      file.extractall(zipDir)
 
       # copy OMSimulator package to root directory
-      if sysconfig.get_platform() == 'linux-x86_64':
-        copy_tree(os.path.join(clonedir,"install/linux/lib/OMSimulator"), target_dir)
-      elif sysconfig.get_platform() == 'mingw':
-        copy_tree(os.path.join(clonedir,"install/mingw/lib/OMSimulator"), target_dir)
-      else:
-        copy_tree(os.path.join(clonedir,"install/win/lib/OMSimulator"), target_dir)
-        
-      ## remove the git directory after copying the files
-      git.rmtree(clonedir)
+      copy_tree(os.path.join(zipDir,"lib/OMSimulator"), target_dir)
+      z.close()
+      file.close()
+      
+      ## remove the zip directory after copying the files
+      shutil.rmtree(zipDir)
+      ## remove the zip file
+      os.remove(zipFilePath)
+      print("### Build OMSimulator successful ###")
 
     build_py.run(self)
 
 setup(
-      name='OMSimulator',
-      version='2.0.1',
-      description='OMSimulator-Python API Interface',
-      author='Open Source Modelica Consortium (OSMC)',
-      author_email='openmodelicadevelopers@ida.liu.se',
+      name="OMSimulator",
+      version="latest",
+      description="OMSimulator-Python API Interface",
+      author="Open Source Modelica Consortium (OSMC)",
+      author_email="openmodelicadevelopers@ida.liu.se",
       license="BSD, OSMC-PL 1.2, GPL (user's choice)",
-      url='http://openmodelica.org/',
-      install_requires=['GitPython'],
-      packages=['OMSimulator'],
+      url="http://openmodelica.org/",
+      install_requires=["requests"],
+      packages=["OMSimulator"],
       cmdclass={'build_py': my_build_py},
       zip_safe = False
       )
