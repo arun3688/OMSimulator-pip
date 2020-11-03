@@ -64,13 +64,16 @@ class my_build_py(build_py):
 
     # download the zip directory from url
     if (sysconfig.get_platform() == 'linux-x86_64'):
-      r = requests.get('https://test.openmodelica.org/jenkins/job/OMSimulator/job/master/lastSuccessfulBuild/artifact/OMSimulator-linux-amd64*/*zip*/archive.zip')
+      response = requests.get('https://test.openmodelica.org/jenkins/job/OMSimulator/job/master/lastSuccessfulBuild/artifact/OMSimulator-linux-amd64*/*zip*/archive.zip')
     elif (sysconfig.get_platform() == 'mingw'):
-      r = requests.get('https://test.openmodelica.org/jenkins/job/OMSimulator/job/master/lastSuccessfulBuild/artifact/OMSimulator-mingw64*/*zip*/archive.zip')
+      response = requests.get('https://test.openmodelica.org/jenkins/job/OMSimulator/job/master/lastSuccessfulBuild/artifact/OMSimulator-mingw64*/*zip*/archive.zip')
     elif (sysconfig.get_platform() == 'win-amd64'):
-      r = requests.get('https://test.openmodelica.org/jenkins/job/OMSimulator/job/master/lastSuccessfulBuild/artifact/OMSimulator-win64*/*zip*/archive.zip')
+      response = requests.get('https://test.openmodelica.org/jenkins/job/OMSimulator/job/master/lastSuccessfulBuild/artifact/OMSimulator-win64*/*zip*/archive.zip')
 
-    z = zipfile.ZipFile(io.BytesIO(r.content))
+    if response.status_code != 200:
+      raise Exception("Downloading artifact failed for {} ".format(response.url))
+
+    z = zipfile.ZipFile(io.BytesIO(response.content))
 
     zipInfo = z.namelist()[0]
     dirname, extension = os.path.splitext(zipInfo)
