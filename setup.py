@@ -38,21 +38,24 @@ import tempfile
 import zipfile
 from distutils.command.build_py import build_py
 from distutils.dir_util import copy_tree
-from distutils.file_util import copy_file
 
 import requests
 from setuptools import setup
 
-topdir = os.path.join(os.getcwd(), 'OMSimulator')
-# check if directory exist and remove
-if os.path.isdir(topdir):
-  os.rmdir(topdir)
-
-# create a dummy directory, so that setuptools creates the package directory
-os.mkdir(topdir)
 
 # overrride build_py, for compiling and copying the dlls
 class my_build_py(build_py):
+  def __init__(self, dist):
+    # check if directory exist and remove
+    topdir = os.path.join(os.getcwd(), 'OMSimulator')
+    if os.path.isdir(topdir):
+      os.rmdir(topdir)
+
+    # recreate it, so that setuptools creates the package directory
+    os.mkdir(topdir)
+
+    build_py.__init__(self, dist)
+
   def fetch_oms(self):
     target_dir = os.path.join(self.build_lib, 'OMSimulator')
 
