@@ -30,12 +30,11 @@ __maintainer__ = 'https://openmodelica.org'
 __status__ = 'Production'
 
 
-import io
 import os
 import shutil
 import sysconfig
 import tempfile
-import zipfile
+import platform
 from distutils.command.build_py import build_py
 from distutils.dir_util import copy_tree
 
@@ -64,29 +63,39 @@ class my_build_py(build_py):
 
     # download the zip directory from url
     if (sysconfig.get_platform() == 'linux-x86_64'):
-      response = requests.get('https://test.openmodelica.org/jenkins/job/OMSimulator/job/master/lastSuccessfulBuild/artifact/OMSimulator-linux-amd64*/*zip*/archive.zip')
-    elif (sysconfig.get_platform() == 'mingw'):
-      response = requests.get('https://test.openmodelica.org/jenkins/job/OMSimulator/job/master/lastSuccessfulBuild/artifact/OMSimulator-mingw64*/*zip*/archive.zip')
+      response = requests.get('https://build.openmodelica.org/omsimulator/linux-amd64/OMSimulator-linux-amd64-v2.0.0.post244-gb82c5b7.tar.gz')
+    elif (sysconfig.get_platform() == 'linux-i386'):
+      response = requests.get('https://build.openmodelica.org/omsimulator/linux-i386/OMSimulator-linux-i386-v2.0.0.post244-gb82c5b7.tar.gz')
+    elif (sysconfig.get_platform() == 'linux-arm32'):
+      response = requests.get('https://build.openmodelica.org/omsimulator/linux-arm32/OMSimulator-linux-arm32-v2.0.0.post244-gb82c5b7.tar.gz')
+    elif (sysconfig.get_platform() == 'mingw' and platform.architecture()[0] == '64bit'):
+      response = requests.get('https://build.openmodelica.org/omsimulator/win-mingw64/OMSimulator-mingw64-v2.0.0.post244-gb82c5b7.zip')
+    elif (sysconfig.get_platform() == 'mingw' and platform.architecture()[0] == '32bit'):
+      response = requests.get('https://build.openmodelica.org/omsimulator/win-mingw64/OMSimulator-mingw64-v2.0.0.post244-gb82c5b7.zip')
     elif (sysconfig.get_platform() == 'win-amd64'):
-      response = requests.get('https://test.openmodelica.org/jenkins/job/OMSimulator/job/master/lastSuccessfulBuild/artifact/OMSimulator-win64*/*zip*/archive.zip')
+      response = requests.get('https://build.openmodelica.org/omsimulator/win-msvc64/OMSimulator-win64-v2.0.0.post244-gb82c5b7.zip')
+    elif (platform.system() == 'Darwin'):
+      response = requests.get('https://build.openmodelica.org/omsimulator/osx/OMSimulator-osx-v2.0.0.post244-gb82c5b7.zip')
+    else:
+      raise Exception("Platform not supported for {} ".format(sysconfig.get_platform()))
 
     if response.status_code != 200:
       raise Exception("Downloading artifact failed for {} ".format(response.url))
 
-    z = zipfile.ZipFile(io.BytesIO(response.content))
-
-    zipInfo = z.namelist()[0]
-    dirname, extension = os.path.splitext(zipInfo)
+    zipFileName = os.path.basename(response.url)
+    dirname, extension = os.path.splitext(zipFileName)
 
     tempDir = tempfile.gettempdir()
-    zipFilePath = os.path.join(tempDir, zipInfo)
+    zipFilePath = os.path.join(tempDir, zipFileName)
 
+    # remove zip file if exists
     if os.path.exists(zipFilePath):
       os.remove(zipFilePath)
 
     # copy the zip file in temp directory
-    z.extractall(tempDir)
-    z.close()
+    zipfile = open(zipFilePath, "wb")
+    zipfile.write(response.content)
+    zipfile.close()
 
     zipDir = os.path.join(tempDir, dirname)
     # remove zip directory if exists
@@ -112,7 +121,7 @@ class my_build_py(build_py):
 
 setup(
       name = 'OMSimulator',
-      version = 'latest',
+      version = '2.0.0.post244',
       description = 'OMSimulator-Python API Interface',
       author = 'Open Source Modelica Consortium (OSMC)',
       author_email = 'openmodelicadevelopers@ida.liu.se',
